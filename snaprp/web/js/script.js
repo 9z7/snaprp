@@ -95,8 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json; charset=UTF-8' },
                 body: JSON.stringify({ storyId })
             }).then(() => loadStories());
+        } else if (e.target.classList.contains('comment-btn')) {
+            const storyId = e.target.dataset.storyId;
+            const comment = prompt("Enter your comment:");
+            if (comment) {
+                fetch(`https://snaprp/commentStory`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                    body: JSON.stringify({ storyId, comment })
+                }).then(() => loadStories());
+            }
         }
-        // Implement comment logic here
     });
 
     window.addEventListener('message', (event) => {
@@ -126,14 +135,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else if (event.data.type === 'playerProfile') {
             const profile = event.data.profile;
+            const streak = profile.streak || 0;
+            const username = profile.username || currentUser.username;
+            const status = profile.status || '';
+
             profileContent.innerHTML = `
                 <div class="profile-header">
                     <div class="profile-avatar"></div>
-                    <div class="profile-username">${profile.username}</div>
-                    <div class="profile-status">"${profile.status || ''}"</div>
+                    <div class="profile-username">${username}</div>
+                    <div class="profile-status">"${status}"</div>
                 </div>
                 <div class="profile-streaks">
-                    🔥 <strong>Daily Streak:</strong> ${profile.streak || 0}
+                    🔥 <strong>Daily Streak:</strong> ${streak}
                 </div>
             `;
         }
