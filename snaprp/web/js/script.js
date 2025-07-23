@@ -55,7 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="story-avatar"></div>
                         <div class="story-username">${story.username}</div>
                     </div>
-                    <img class="story-image" src="${story.image_url}" alt="Story Image">
+                    <div class="story-image-container">
+                        <img class="story-image" src="${story.image_url}" alt="Story Image">
+                        <div class="story-overlay">
+                            <div class="story-overlay-username">${story.username}</div>
+                            <div class="story-overlay-timestamp">${new Date(story.timestamp).toLocaleString()}</div>
+                        </div>
+                    </div>
                     <div class="story-actions">
                         <span class="story-action like-btn" data-story-id="${story.id}">❤️</span>
                         <span class="story-action comment-btn" data-story-id="${story.id}">💬</span>

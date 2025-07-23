@@ -33,7 +33,35 @@ RegisterNUICallback("openCamera", function(data, cb)
         CreateThread(function()
             while inCamera do
                 Wait(0)
-                -- You can add controls here to move the camera
+                local x, y, z = table.unpack(GetCamCoord(camera))
+                local rotX, rotY, rotZ = table.unpack(GetCamRot(camera, 2))
+
+                -- Move controls
+                if IsControlPressed(0, 32) then -- W
+                    local newX = x + 0.1 * (math.cos(math.rad(rotZ + 90)))
+                    local newY = y + 0.1 * (math.sin(math.rad(rotZ + 90)))
+                    SetCamCoord(camera, newX, newY, z)
+                end
+                if IsControlPressed(0, 33) then -- S
+                    local newX = x - 0.1 * (math.cos(math.rad(rotZ + 90)))
+                    local newY = y - 0.1 * (math.sin(math.rad(rotZ + 90)))
+                    SetCamCoord(camera, newX, newY, z)
+                end
+                if IsControlPressed(0, 34) then -- A
+                    local newX = x - 0.1 * (math.cos(math.rad(rotZ)))
+                    local newY = y - 0.1 * (math.sin(math.rad(rotZ)))
+                    SetCamCoord(camera, newX, newY, z)
+                end
+                if IsControlPressed(0, 35) then -- D
+                    local newX = x + 0.1 * (math.cos(math.rad(rotZ)))
+                    local newY = y + 0.1 * (math.sin(math.rad(rotZ)))
+                    SetCamCoord(camera, newX, newY, z)
+                end
+
+                -- Rotation controls
+                local mouseX = GetControlNormal(0, 239) -- MOUSE X
+                local mouseY = GetControlNormal(0, 240) -- MOUSE Y
+                SetCamRot(camera, rotX - mouseY * 5.0, 0.0, rotZ - mouseX * 5.0, 2)
 
                 if IsControlJustPressed(0, 27) then -- Enter key to take photo
                     exports['screenshot-basic']:requestScreenshot(function(data)

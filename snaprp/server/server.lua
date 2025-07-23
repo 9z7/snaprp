@@ -7,7 +7,7 @@ end
 function getPlayerIdentifier(source)
     local identifiers = GetPlayerIdentifiers(source)
     for _, identifier in ipairs(identifiers) do
-        if string.match(identifier, "steam:") then
+        if string.match(identifier, "license:") then
             return identifier
         end
     end

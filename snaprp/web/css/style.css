@@ -122,6 +122,25 @@ body {
 
 .story-image {
     width: 100%;
+    position: relative;
+}
+
+.story-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+}
+
+.story-overlay-username {
+    font-weight: bold;
+}
+
+.story-overlay-timestamp {
+    font-size: 12px;
 }
 
 .story-actions {
