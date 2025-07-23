@@ -1,27 +1,34 @@
-local Proxy = module("vrp", "lib/Proxy")
-local vRP = Proxy.getInterface("vRP")
-
 -- Execute the SQL file to create the tables
 local sqlFile = LoadResourceFile(GetCurrentResourceName(), "snaprp.sql")
 if sqlFile then
     MySQL.Async.execute(sqlFile)
 end
 
+function getPlayerIdentifier(source)
+    local identifiers = GetPlayerIdentifiers(source)
+    for _, identifier in ipairs(identifiers) do
+        if string.match(identifier, "steam:") then
+            return identifier
+        end
+    end
+    return nil
+end
+
 RegisterServerEvent('snaprp:saveStory')
 AddEventHandler('snaprp:saveStory', function(screenshotUrl)
-    local user_id = vRP.getUserId({source})
-    if user_id then
-        local identity = vRP.getUserIdentity({user_id})
-        local username = identity.firstname .. " " .. identity.name
+    local source = source
+    local identifier = getPlayerIdentifier(source)
+    if identifier then
+        local username = GetPlayerName(source)
         MySQL.Async.execute('INSERT INTO snaprp_stories (identifier, username, image_url) VALUES (@identifier, @username, @image_url)', {
-            ['@identifier'] = "user:"..user_id,
+            ['@identifier'] = identifier,
             ['@username'] = username,
             ['@image_url'] = screenshotUrl
         })
 
         -- Update streak
         MySQL.Async.fetch('SELECT streak, last_story_timestamp FROM snaprp_streaks WHERE identifier = @identifier', {
-            ['@identifier'] = "user:"..user_id
+            ['@identifier'] = identifier
         }, function(result)
             local today = os.time()
             if result and #result > 0 then
@@ -30,16 +37,16 @@ AddEventHandler('snaprp:saveStory', function(screenshotUrl)
 
                 if diff >= 1 and diff < 2 then
                     MySQL.Async.execute('UPDATE snaprp_streaks SET streak = streak + 1, last_story_timestamp = NOW() WHERE identifier = @identifier', {
-                        ['@identifier'] = "user:"..user_id
+                        ['@identifier'] = identifier
                     })
                 elseif diff >= 2 then
                     MySQL.Async.execute('UPDATE snaprp_streaks SET streak = 1, last_story_timestamp = NOW() WHERE identifier = @identifier', {
-                        ['@identifier'] = "user:"..user_id
+                        ['@identifier'] = identifier
                     })
                 end
             else
                 MySQL.Async.execute('INSERT INTO snaprp_streaks (identifier, streak, last_story_timestamp) VALUES (@identifier, 1, NOW())', {
-                    ['@identifier'] = "user:"..user_id
+                    ['@identifier'] = identifier
                 })
             end
         end)
@@ -48,11 +55,12 @@ end)
 
 RegisterServerEvent('snaprp:likeStory')
 AddEventHandler('snaprp:likeStory', function(storyId)
-    local user_id = vRP.getUserId({source})
-    if user_id then
+    local source = source
+    local identifier = getPlayerIdentifier(source)
+    if identifier then
         MySQL.Async.fetch('SELECT id FROM snaprp_likes WHERE story_id = @story_id AND identifier = @identifier', {
             ['@story_id'] = storyId,
-            ['@identifier'] = "user:"..user_id
+            ['@identifier'] = identifier
         }, function(result)
             if result and #result > 0 then
                 MySQL.Async.execute('DELETE FROM snaprp_likes WHERE id = @id', {
@@ -61,7 +69,7 @@ AddEventHandler('snaprp:likeStory', function(storyId)
             else
                 MySQL.Async.execute('INSERT INTO snaprp_likes (story_id, identifier) VALUES (@story_id, @identifier)', {
                     ['@story_id'] = storyId,
-                    ['@identifier'] = "user:"..user_id
+                    ['@identifier'] = identifier
                 })
             end
         end)
@@ -70,13 +78,13 @@ end)
 
 RegisterServerEvent('snaprp:commentStory')
 AddEventHandler('snaprp:commentStory', function(storyId, comment)
-    local user_id = vRP.getUserId({source})
-    if user_id then
-        local identity = vRP.getUserIdentity({user_id})
-        local username = identity.firstname .. " " .. identity.name
+    local source = source
+    local identifier = getPlayerIdentifier(source)
+    if identifier then
+        local username = GetPlayerName(source)
         MySQL.Async.execute('INSERT INTO snaprp_comments (story_id, identifier, username, comment) VALUES (@story_id, @identifier, @username, @comment)', {
             ['@story_id'] = storyId,
-            ['@identifier'] = "user:"..user_id,
+            ['@identifier'] = identifier,
             ['@username'] = username,
             ['@comment'] = comment
         })
@@ -85,44 +93,51 @@ end)
 
 RegisterServerEvent('snaprp:getPlayerProfile')
 AddEventHandler('snaprp:getPlayerProfile', function(targetIdentifier)
-    local user_id = tonumber(string.gsub(targetIdentifier, "user:", ""))
-    local source_player = vRP.getUserSource({user_id})
+    local source = source
     MySQL.Async.fetch('SELECT * FROM snaprp_profiles WHERE identifier = @identifier', {
         ['@identifier'] = targetIdentifier
     }, function(result)
         if result and #result > 0 then
-            TriggerClientEvent('snaprp:playerProfile', source_player, result[1])
+            TriggerClientEvent('snaprp:playerProfile', source, result[1])
         end
     end)
 end)
 
 RegisterServerEvent('snaprp:updatePlayerStatus')
 AddEventHandler('snaprp:updatePlayerStatus', function(status)
-    local user_id = vRP.getUserId({source})
-    if user_id then
+    local source = source
+    local identifier = getPlayerIdentifier(source)
+    if identifier then
         MySQL.Async.execute('UPDATE snaprp_profiles SET status = @status WHERE identifier = @identifier', {
             ['@status'] = status,
-            ['@identifier'] = "user:"..user_id
+            ['@identifier'] = identifier
         })
     end
 end)
 
-AddEventHandler('vRP:playerSpawn', function(user_id, source, first_spawn)
-    MySQL.Async.execute('INSERT INTO snaprp_profiles (identifier, online) VALUES (@identifier, 1) ON DUPLICATE KEY UPDATE online = 1', {
-        ['@identifier'] = "user:"..user_id
-    })
+AddEventHandler('playerJoining', function()
+    local source = source
+    local identifier = getPlayerIdentifier(source)
+    if identifier then
+        MySQL.Async.execute('INSERT INTO snaprp_profiles (identifier, online) VALUES (@identifier, 1) ON DUPLICATE KEY UPDATE online = 1', {
+            ['@identifier'] = identifier
+        })
+    end
 end)
 
-AddEventHandler("vRP:playerLeave", function(user_id, source)
-    MySQL.Async.execute('UPDATE snaprp_profiles SET online = 0 WHERE identifier = @identifier', {
-        ['@identifier'] = "user:"..user_id
-    })
+AddEventHandler("playerDropped", function(reason)
+    local source = source
+    local identifier = getPlayerIdentifier(source)
+    if identifier then
+        MySQL.Async.execute('UPDATE snaprp_profiles SET online = 0 WHERE identifier = @identifier', {
+            ['@identifier'] = identifier
+        })
+    end
 end)
 
 RegisterServerEvent('snaprp:getStories')
 AddEventHandler('snaprp:getStories', function()
-    local user_id = vRP.getUserId({source})
-    local source_player = vRP.getUserSource({user_id})
+    local source = source
     MySQL.Async.fetchAll('SELECT * FROM snaprp_stories ORDER BY timestamp DESC', {}, function(stories)
         if stories and #stories > 0 then
             local storyData = {}
@@ -144,13 +159,13 @@ AddEventHandler('snaprp:getStories', function()
                             comments = comments
                         })
                         if #storyData == #stories then
-                            TriggerClientEvent('snaprp:stories', source_player, storyData)
+                            TriggerClientEvent('snaprp:stories', source, storyData)
                         end
                     end)
                 end)
             end
         else
-            TriggerClientEvent('snaprp:stories', source_player, {})
+            TriggerClientEvent('snaprp:stories', source, {})
         end
     end)
 end)

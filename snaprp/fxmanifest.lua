@@ -22,7 +22,6 @@ server_scripts {
 }
 
 dependencies {
-    'vrp',
     'screenshot-basic',
     'mysql-async'
 }
