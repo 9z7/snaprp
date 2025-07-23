@@ -22,7 +22,7 @@ server_scripts {
 }
 
 dependencies {
-    'es_extended',
+    'vrp',
     'screenshot-basic',
-    'oxmysql'
+    'mysql-async'
 }

@@ -1,4 +1,3 @@
-local ESX = exports["es_extended"]:getSharedObject()
 local showPhone = false
 
 RegisterCommand("phone", function()
